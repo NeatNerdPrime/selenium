@@ -43,7 +43,6 @@ import org.openqa.selenium.grid.data.RequestId;
 import org.openqa.selenium.grid.data.Session;
 import org.openqa.selenium.grid.data.SessionRequest;
 import org.openqa.selenium.grid.data.Slot;
-import org.openqa.selenium.grid.distributor.gridmodel.local.LocalGridModel;
 import org.openqa.selenium.grid.distributor.local.LocalDistributor;
 import org.openqa.selenium.grid.distributor.remote.RemoteDistributor;
 import org.openqa.selenium.grid.distributor.selector.DefaultSlotSelector;
@@ -93,6 +92,7 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.from;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.openqa.selenium.grid.data.Availability.DOWN;
@@ -111,6 +111,8 @@ public class DistributorTest {
   private Capabilities caps;
   private URI nodeUri;
   private URI routableUri;
+  private LocalSessionMap sessions;
+  private NewSessionQueue queue;
 
   private static <A, B> EitherAssert<A, B> assertThatEither(Either<A, B> either) {
     return new EitherAssert<>(either);
@@ -122,31 +124,31 @@ public class DistributorTest {
     routableUri = createUri();
     tracer = DefaultTestTracer.createTracer();
     bus = new GuavaEventBus();
-    LocalSessionMap sessions = new LocalSessionMap(tracer, bus);
-    NewSessionQueue queue = new LocalNewSessionQueue(
+    sessions = new LocalSessionMap(tracer, bus);
+    queue = new LocalNewSessionQueue(
       tracer,
       bus,
       new DefaultSlotMatcher(),
       Duration.ofSeconds(2),
       Duration.ofSeconds(2),
       registrationSecret);
-    local = new LocalDistributor(
-      tracer,
-      bus,
-      HttpClient.Factory.createDefault(),
-      sessions,
-      queue,
-      new LocalGridModel(bus),
-      new DefaultSlotSelector(),
-      registrationSecret,
-      Duration.ofMinutes(5),
-      false);
+
     stereotype = new ImmutableCapabilities("browserName", "cheese");
     caps = new ImmutableCapabilities("browserName", "cheese");
   }
 
   @Test
   public void creatingANewSessionWithoutANodeEndsInFailure() {
+    local = new LocalDistributor(
+      tracer,
+      bus,
+      HttpClient.Factory.createDefault(),
+      sessions,
+      queue,
+      new DefaultSlotSelector(),
+      registrationSecret,
+      Duration.ofMinutes(5),
+      false);
     Either<SessionNotCreatedException, CreateSessionResponse> result = local.newSession(createRequest(caps));
     assertThatEither(result).isLeft();
   }
@@ -175,7 +177,6 @@ public class DistributorTest {
       new PassthroughHttpClient.Factory(node),
       sessions,
       queue,
-      new LocalGridModel(bus),
       new DefaultSlotSelector(),
       registrationSecret,
       Duration.ofMinutes(5),
@@ -225,7 +226,6 @@ public class DistributorTest {
       new PassthroughHttpClient.Factory(node),
       sessions,
       queue,
-      new LocalGridModel(bus),
       new DefaultSlotSelector(),
       registrationSecret,
       Duration.ofMinutes(5),
@@ -267,7 +267,6 @@ public class DistributorTest {
       new PassthroughHttpClient.Factory(node),
       sessions,
       queue,
-      new LocalGridModel(bus),
       new DefaultSlotSelector(),
       registrationSecret,
       Duration.ofMinutes(5),
@@ -310,7 +309,6 @@ public class DistributorTest {
       new PassthroughHttpClient.Factory(node),
       sessions,
       queue,
-      new LocalGridModel(bus),
       new DefaultSlotSelector(),
       registrationSecret,
       Duration.ofMinutes(5),
@@ -350,7 +348,6 @@ public class DistributorTest {
       new PassthroughHttpClient.Factory(node),
       sessions,
       queue,
-      new LocalGridModel(bus),
       new DefaultSlotSelector(),
       registrationSecret,
       Duration.ofMinutes(5),
@@ -389,7 +386,6 @@ public class DistributorTest {
       new PassthroughHttpClient.Factory(node),
       sessions,
       queue,
-      new LocalGridModel(bus),
       new DefaultSlotSelector(),
       registrationSecret,
       Duration.ofMinutes(5),
@@ -435,7 +431,6 @@ public class DistributorTest {
       new PassthroughHttpClient.Factory(node),
       sessions,
       queue,
-      new LocalGridModel(bus),
       new DefaultSlotSelector(),
       registrationSecret,
       Duration.ofMinutes(5),
@@ -484,7 +479,6 @@ public class DistributorTest {
       new PassthroughHttpClient.Factory(node),
       sessions,
       queue,
-      new LocalGridModel(bus),
       new DefaultSlotSelector(),
       registrationSecret,
       Duration.ofMinutes(5),
@@ -518,6 +512,17 @@ public class DistributorTest {
         caps,
         new TestSessionFactory((id, c) -> new Session(id, nodeUri, stereotype, c, Instant.now())))
       .build();
+
+    local = new LocalDistributor(
+      tracer,
+      bus,
+      new PassthroughHttpClient.Factory(node),
+      sessions,
+      queue,
+      new DefaultSlotSelector(),
+      registrationSecret,
+      Duration.ofMinutes(5),
+      false);
 
     local.add(node);
     local.add(node);
@@ -558,7 +563,6 @@ public class DistributorTest {
       new PassthroughHttpClient.Factory(handler),
       sessions,
       queue,
-      new LocalGridModel(bus),
       new DefaultSlotSelector(),
       registrationSecret,
       Duration.ofMinutes(5),
@@ -602,7 +606,6 @@ public class DistributorTest {
       new PassthroughHttpClient.Factory(handler),
       sessions,
       queue,
-      new LocalGridModel(bus),
       new DefaultSlotSelector(),
       registrationSecret,
       Duration.ofMinutes(5),
@@ -695,7 +698,6 @@ public class DistributorTest {
       new PassthroughHttpClient.Factory(handler),
       sessions,
       queue,
-      new LocalGridModel(bus),
       new DefaultSlotSelector(),
       registrationSecret,
       Duration.ofSeconds(1),
@@ -737,7 +739,6 @@ public class DistributorTest {
       new PassthroughHttpClient.Factory(node),
       sessions,
       queue,
-      new LocalGridModel(bus),
       new DefaultSlotSelector(),
       registrationSecret,
       Duration.ofMinutes(5),
@@ -778,7 +779,6 @@ public class DistributorTest {
       new PassthroughHttpClient.Factory(node),
       sessions,
       queue,
-      new LocalGridModel(bus),
       new DefaultSlotSelector(),
       registrationSecret,
       Duration.ofMinutes(5),
@@ -834,7 +834,6 @@ public class DistributorTest {
       new PassthroughHttpClient.Factory(handler),
       sessions,
       queue,
-      new LocalGridModel(bus),
       new DefaultSlotSelector(),
       registrationSecret,
       Duration.ofMinutes(5),
@@ -875,7 +874,6 @@ public class DistributorTest {
       new PassthroughHttpClient.Factory(node),
       sessions,
       queue,
-      new LocalGridModel(bus),
       new DefaultSlotSelector(),
       registrationSecret,
       Duration.ofMinutes(5),
@@ -921,7 +919,6 @@ public class DistributorTest {
       new PassthroughHttpClient.Factory(handler),
       sessions,
       queue,
-      new LocalGridModel(bus),
       new DefaultSlotSelector(),
       registrationSecret,
       Duration.ofSeconds(1),
@@ -987,7 +984,6 @@ public class DistributorTest {
       new PassthroughHttpClient.Factory(handler),
       sessions,
       queue,
-      new LocalGridModel(bus),
       new DefaultSlotSelector(),
       registrationSecret,
       Duration.ofMinutes(5),
@@ -1096,6 +1092,17 @@ public class DistributorTest {
       .healthCheck(() -> new HealthCheck.Result(DOWN, "TL;DR"))
       .build();
 
+    local = new LocalDistributor(
+      tracer,
+      bus,
+      new PassthroughHttpClient.Factory(node),
+      sessions,
+      queue,
+      new DefaultSlotSelector(),
+      registrationSecret,
+      Duration.ofMinutes(5),
+      false);
+
     local.add(node);
 
     DistributorStatus status = local.getStatus();
@@ -1117,6 +1124,17 @@ public class DistributorTest {
       .healthCheck(() -> new HealthCheck.Result(DOWN, "TL;DR"))
       .build();
 
+    local = new LocalDistributor(
+      tracer,
+      bus,
+      new PassthroughHttpClient.Factory(node),
+      sessions,
+      queue,
+      new DefaultSlotSelector(),
+      registrationSecret,
+      Duration.ofMinutes(5),
+      false);
+
     local.add(node);
 
     DistributorStatus status = local.getStatus();
@@ -1125,8 +1143,27 @@ public class DistributorTest {
 
   @Test
   public void shouldFallbackToSecondAvailableCapabilitiesIfFirstNotAvailable() {
-    local.add(createNode(new ImmutableCapabilities("browserName", "not cheese"), 1, 1));
-    local.add(createNode(new ImmutableCapabilities("browserName", "cheese"), 1, 0));
+    CombinedHandler handler = new CombinedHandler();
+
+    Node firstNode = createNode(new ImmutableCapabilities("browserName", "not cheese"), 1, 1);
+    Node secondNode =  createNode(new ImmutableCapabilities("browserName", "cheese"), 1, 0);
+
+    handler.addHandler(firstNode);
+    handler.addHandler(secondNode);
+
+    local = new LocalDistributor(
+      tracer,
+      bus,
+      new PassthroughHttpClient.Factory(handler),
+      sessions,
+      queue,
+      new DefaultSlotSelector(),
+      registrationSecret,
+      Duration.ofMinutes(5),
+      false);
+
+    local.add(firstNode);
+    local.add(secondNode);
     waitToHaveCapacity(local);
 
     SessionRequest sessionRequest = new SessionRequest(
@@ -1151,8 +1188,23 @@ public class DistributorTest {
 
   @Test
   public void shouldFallbackToSecondAvailableCapabilitiesIfFirstThrowsOnCreation() {
-    local.add(createBrokenNode(new ImmutableCapabilities("browserName", "not cheese")));
-    local.add(createNode(new ImmutableCapabilities("browserName", "cheese"), 1, 0));
+    CombinedHandler handler = new CombinedHandler();
+    Node brokenNode = createBrokenNode(new ImmutableCapabilities("browserName", "not cheese"));
+    Node node = createNode(new ImmutableCapabilities("browserName", "cheese"), 1, 0);
+    handler.addHandler(brokenNode);
+    handler.addHandler(node);
+    local = new LocalDistributor(
+      tracer,
+      bus,
+      new PassthroughHttpClient.Factory(handler),
+      sessions,
+      queue,
+      new DefaultSlotSelector(),
+      registrationSecret,
+      Duration.ofMinutes(5),
+      false);
+    local.add(brokenNode);
+    local.add(node);
     waitForAllNodesToHaveCapacity(local, 2);
 
     SessionRequest sessionRequest = new SessionRequest(
@@ -1207,7 +1259,7 @@ public class DistributorTest {
   private void waitForAllNodesToMeetCondition(Distributor distributor, int nodeCount,
                                               Availability availability) {
     new FluentWait<>(distributor)
-      .withTimeout(Duration.ofSeconds(5))
+      .withTimeout(Duration.ofSeconds(10))
       .pollingEvery(Duration.ofMillis(100))
       .until(d -> {
         Set<NodeStatus> nodes = d.getStatus().getNodes();
